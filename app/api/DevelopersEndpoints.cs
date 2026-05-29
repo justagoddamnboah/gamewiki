@@ -10,7 +10,7 @@ public static class DevelopersEndpoints {
         var group = api.MapGroup("/devs").WithTags("Devs");
 
         group.MapGet("/", async (IDevService devs, IMapper mapper) => {
-                var result = await devs.GetAllAsync();
+                var result = await devs.GetAll();
                 return Results.Ok(result.Select(mapper.Map));
             })
             .WithSummary("Получить список разработчиков")
@@ -21,7 +21,7 @@ public static class DevelopersEndpoints {
         
         group.MapGet("/{devId:guid}",
                 async (Guid devId, IDevService devs, IMapper mapper) => {
-                    var dev = await devs.GetByIdAsync(devId);
+                    var dev = await devs.GetById(devId);
                     return dev is null
                         ? Results.NotFound(new ErrorResponse { Message = "Разработчик не найден." })
                         : Results.Ok(mapper.Map(dev));
@@ -34,7 +34,7 @@ public static class DevelopersEndpoints {
         
         group.MapPost("/", async (CreateDevRequest body, IDevService devs, IMapper mapper) => {
                 try {
-                    var created = await devs.AddAsync(body);
+                    var created = await devs.Add(body);
                     return Results.Created($"/api/devs/{created.Id}", mapper.Map(created));
                 }
                 catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) {
@@ -48,7 +48,7 @@ public static class DevelopersEndpoints {
         group.MapPut("/{devId:guid}",
                 async (Guid devId, UpdateDevRequest body, IDevService devs, IMapper mapper) => {
                 try {
-                    var updated = await devs.UpdateAsync(devId, body);
+                    var updated = await devs.Update(devId, body);
                     return updated is null
                         ? Results.NotFound(new ErrorResponse { Message = "Разработчик не найден." })
                         : Results.Ok(mapper.Map(updated));
@@ -65,7 +65,7 @@ public static class DevelopersEndpoints {
         group.MapDelete("/{devId:guid}",
                 async (Guid devId, IDevService devs) => {
                 try {
-                    var deleted = await devs.DeleteAsync(devId);
+                    var deleted = await devs.Delete(devId);
                     return deleted
                         ? Results.NoContent()
                         : Results.NotFound(new ErrorResponse { Message = "Разработчик не найден." });

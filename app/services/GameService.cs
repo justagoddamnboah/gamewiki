@@ -1,29 +1,35 @@
-﻿using gamewiki.net.database;
-using gamewiki.net.dto.request;
+﻿using gamewiki.net.dto.request;
 using gamewiki.net.interfaces;
 using gamewiki.net.model;
-using Microsoft.EntityFrameworkCore;
 
 namespace gamewiki.net.services;
 
-public class GameService(WikiDbContext db) : IGameService {
-    public async Task<IReadOnlyList<Game>> GetAllAsync()
-        => await db.Games
-            .AsNoTracking()
-            .OrderBy(x => x.Name)
-            .ToListAsync();
+public class GameService : IGameService {
+    public Task<IReadOnlyList<Game>> GetAll() {
+        return Task.FromResult<IReadOnlyList<Game>>(
+            InMemoryData.Games
+                .OrderBy(x => x.Name)
+                .ToList()
+        );
+    }
 
-    public async Task<Game?> GetByIdAsync(Guid id)
-        => await db.Games
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id);
+    public Task<Game?> GetById(Guid id) {
+        var game = InMemoryData.Games.FirstOrDefault(x => x.Id == id);
+        return Task.FromResult(game);
+    }
 
-    public async Task<Game> AddAsync(CreateGameRequest request) {
+    public Task<Game> Add(CreateGameRequest request) {
         ValidateProductFields(request.Name, request.ReleaseYear);
 
         var id = request.Id ?? Guid.NewGuid();
-        if (await db.Games.AnyAsync(x => x.Id == id)) {
+        
+        if (InMemoryData.Games.Any(x => x.Id == id)) {
             throw new InvalidOperationException($"Игра с идентификатором {id} уже существует.");
+        }
+        
+        var devExists = InMemoryData.Developers.Any(d => d.Id == request.DevId);
+        if (!devExists) {
+            throw new InvalidOperationException($"Разработчик с идентификатором {request.DevId} не найден.");
         }
 
         var entity = new Game {
@@ -33,35 +39,37 @@ public class GameService(WikiDbContext db) : IGameService {
             DevId = request.DevId
         };
 
-        db.Games.Add(entity);
-        await db.SaveChangesAsync();
-        return entity;
+        InMemoryData.Games.Add(entity);
+        return Task.FromResult(entity);
     }
 
-    public async Task<Game?> UpdateAsync(Guid id, UpdateGameRequest request) {
+    public Task<Game?> Update(Guid id, UpdateGameRequest request) {
         ValidateProductFields(request.Name, request.ReleaseYear);
 
-        var entity = await db.Games.FirstOrDefaultAsync(x => x.Id == id);
+        var entity = InMemoryData.Games.FirstOrDefault(x => x.Id == id);
         if (entity is null) {
-            return null;
+            return Task.FromResult<Game?>(null);
         }
+
+        var devExists = InMemoryData.Developers.Any(d => d.Id == request.DevId);
+        if (!devExists) {
+            throw new InvalidOperationException($"Разработчик с идентификатором {request.DevId} не найден.");
+        } 
 
         entity.Name = request.Name.Trim();
         entity.ReleaseYear = request.ReleaseYear;
         entity.DevId = request.DevId;
-        await db.SaveChangesAsync();
-        return entity;
+        
+        return Task.FromResult<Game?>(entity);
     }
 
-    public async Task<bool> DeleteAsync(Guid id) {
-        var entity = await db.Games.FirstOrDefaultAsync(x => x.Id == id);
+    public Task<bool> Delete(Guid id) {
+        var entity = InMemoryData.Games.FirstOrDefault(x => x.Id == id);
         if (entity is null) {
-            return false;
+            return Task.FromResult(false);
         }
 
-        db.Games.Remove(entity);
-        await db.SaveChangesAsync();
-        return true;
+        return Task.FromResult(InMemoryData.Games.Remove(entity));
     }
 
     private static void ValidateProductFields(string name, int releaseYear) {

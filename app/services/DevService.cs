@@ -1,28 +1,29 @@
 using gamewiki.net.dto.request;
 using gamewiki.net.interfaces;
-using gamewiki.net.database;
 using gamewiki.net.model;
-using Microsoft.EntityFrameworkCore;
 
 namespace gamewiki.net.services;
 
-public class DevService(WikiDbContext db) : IDevService {
-    public async Task<IReadOnlyList<Dev>> GetAllAsync()
-        => await db.Devs
-            .AsNoTracking()
-            .OrderBy(x => x.Name)
-            .ToListAsync();
+public class DevService : IDevService {
+    public Task<IReadOnlyList<Dev>> GetAll() {
+        return Task.FromResult<IReadOnlyList<Dev>>(
+            InMemoryData.Developers
+                .OrderBy(x => x.Name)
+                .ToList()
+        );
+    }
 
-    public async Task<Dev?> GetByIdAsync(Guid id)
-        => await db.Devs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id);
+    public Task<Dev?> GetById(Guid id) {
+        var dev = InMemoryData.Developers.FirstOrDefault(x => x.Id == id);
+        return Task.FromResult(dev);
+    }
 
-    public async Task<Dev> AddAsync(CreateDevRequest request) {
+    public Task<Dev> Add(CreateDevRequest request) {
         ValidateUserFields(request.Name);
 
         var id = request.Id ?? Guid.NewGuid();
-        if (await db.Devs.AnyAsync(x => x.Id == id)) {
+        
+        if (InMemoryData.Developers.Any(x => x.Id == id)) {
             throw new InvalidOperationException($"Разработчик с идентификатором {id} уже существует.");
         }
 
@@ -31,43 +32,39 @@ public class DevService(WikiDbContext db) : IDevService {
             Name = request.Name.Trim()
         };
 
-        db.Devs.Add(entity);
-        await db.SaveChangesAsync();
-        return entity;
+        InMemoryData.Developers.Add(entity);
+        return Task.FromResult(entity);
     }
 
-    public async Task<Dev?> UpdateAsync(Guid id, UpdateDevRequest request) {
+    public Task<Dev?> Update(Guid id, UpdateDevRequest request) {
         ValidateUserFields(request.Name);
 
-        var entity = await db.Devs.FirstOrDefaultAsync(x => x.Id == id);
+        var entity = InMemoryData.Developers.FirstOrDefault(x => x.Id == id);
         if (entity is null) {
-            return null;
+            return Task.FromResult<Dev?>(null);
         }
 
         entity.Name = request.Name.Trim();
-        await db.SaveChangesAsync();
-        return entity;
+        return Task.FromResult<Dev?>(entity);
     }
 
-    public async Task<bool> DeleteAsync(Guid id) {
-        var entity = await db.Devs.FirstOrDefaultAsync(x => x.Id == id);
+    public Task<bool> Delete(Guid id) {
+        var entity = InMemoryData.Developers.FirstOrDefault(x => x.Id == id);
         if (entity is null) {
-            return false;
+            return Task.FromResult(false);
         }
 
-        var hasGames = await db.Games.AnyAsync(p => p.Id == id);
+        var hasGames = InMemoryData.Games.Any(g => g.DevId == id);
         if (hasGames) {
             throw new InvalidOperationException("Нельзя удалить разработчика: есть связанные игры.");
         }
 
-        db.Devs.Remove(entity);
-        await db.SaveChangesAsync();
-        return true;
+        return Task.FromResult(InMemoryData.Developers.Remove(entity));
     }
 
-    private static void ValidateUserFields(string Name) {
-        if (string.IsNullOrWhiteSpace(Name)) {
-            throw new ArgumentException("Имя пользователя не должно быть пустым.");
+    private static void ValidateUserFields(string name) {
+        if (string.IsNullOrWhiteSpace(name)) {
+            throw new ArgumentException("Имя разработчика не должно быть пустым.");
         }
     }
 }

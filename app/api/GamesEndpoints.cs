@@ -10,7 +10,7 @@ public static class GamesEndpoints {
         var group = api.MapGroup("/games").WithTags("Games");
 
         group.MapGet("/", async (IGameService games, IMapper mapper) => {
-                var result = await games.GetAllAsync();
+                var result = await games.GetAll();
                 return Results.Ok(result.Select(mapper.Map));
             })
             .WithSummary("Получить список игр")
@@ -19,7 +19,7 @@ public static class GamesEndpoints {
 
         group.MapGet("/{gameId:guid}",
                 async (Guid gameId, IGameService games, IMapper mapper) => {
-                var game = await games.GetByIdAsync(gameId);
+                var game = await games.GetById(gameId);
                 return game is null
                     ? Results.NotFound(new ErrorResponse { Message = "Игра не найдена." })
                     : Results.Ok(mapper.Map(game));
@@ -30,7 +30,7 @@ public static class GamesEndpoints {
 
         group.MapPost("/", async (CreateGameRequest body, IGameService games, IMapper mapper) => {
                 try {
-                    var created = await games.AddAsync(body);
+                    var created = await games.Add(body);
                     return Results.Created($"/api/games/{created.Id}", mapper.Map(created));
                 }
                 catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) {
@@ -44,7 +44,7 @@ public static class GamesEndpoints {
         group.MapPut("/{gameId:guid}",
                 async (Guid gameId, UpdateGameRequest body, IGameService games, IMapper mapper) => {
                 try {
-                    var updated = await games.UpdateAsync(gameId, body);
+                    var updated = await games.Update(gameId, body);
                     return updated is null
                         ? Results.NotFound(new ErrorResponse { Message = "Игра не найдена." })
                         : Results.Ok(mapper.Map(updated));
@@ -61,7 +61,7 @@ public static class GamesEndpoints {
         group.MapDelete("/{gameId:guid}",
                 async (Guid gameId, IGameService games) => {
                 try {
-                    var deleted = await games.DeleteAsync(gameId);
+                    var deleted = await games.Delete(gameId);
                     return deleted
                         ? Results.NoContent()
                         : Results.NotFound(new ErrorResponse { Message = "Игра не найдена." });

@@ -4,9 +4,9 @@ using gamewiki.net.model;
 namespace gamewiki.net.interfaces;
 
 public interface IGameService {
-    Task<IReadOnlyList<Game>> GetAllAsync();
-    Task<Game?> GetByIdAsync(Guid id);
-    Task<Game> AddAsync(CreateGameRequest request);
-    Task<Game?> UpdateAsync(Guid id, UpdateGameRequest request);
-    Task<bool> DeleteAsync(Guid id);
+    Task<IReadOnlyList<Game>> GetAll();
+    Task<Game?> GetById(Guid id);
+    Task<Game> Add(CreateGameRequest request);
+    Task<Game?> Update(Guid id, UpdateGameRequest request);
+    Task<bool> Delete(Guid id);
 }
